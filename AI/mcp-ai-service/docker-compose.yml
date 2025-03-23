@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_SERVICE_AWS=http://model-service-aws:8001
+      - MODEL_SERVICE_GCP=http://model-service-gcp:8002
+      - MODEL_SERVICE_AZURE=http://model-service-azure:8003
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - model-service-aws
+      - model-service-gcp
+      - model-service-azure
+      - redis
+
+  model-service-aws:
+    build: ./model-service
+    ports:
+      - "8001:8001"
+    environment:
+      - SERVICE_PORT=8001
+      - CLOUD_PROVIDER=aws
+      - MODEL_PATH=/models/llama2
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - model_data:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  model-service-gcp:
+    build: ./model-service
+    ports:
+      - "8002:8002"
+    environment:
+      - SERVICE_PORT=8002
+      - CLOUD_PROVIDER=gcp
+      - MODEL_PATH=/models/llama2
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - model_data:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  model-service-azure:
+    build: ./model-service
+    ports:
+      - "8003:8003"
+    environment:
+      - SERVICE_PORT=8003
+      - CLOUD_PROVIDER=azure
+      - MODEL_PATH=/models/llama2
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - model_data:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+volumes:
+  model_data:
+  redis_data:
+  prometheus_data:
+  grafana_data: 
