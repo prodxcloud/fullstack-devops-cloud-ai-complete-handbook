@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - API_URL=http://api-gateway:4000
+    depends_on:
+      - api-gateway
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "4000:4000"
+    environment:
+      - PRODUCT_SERVICE_URL=http://product-service:4001
+      - ORDER_SERVICE_URL=http://order-service:4002
+      - USER_SERVICE_URL=http://user-service:4003
+    depends_on:
+      - product-service
+      - order-service
+      - user-service
+
+  product-service:
+    build: ./product-service
+    ports:
+      - "4001:4001"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/products
+    depends_on:
+      - mongodb
+
+  order-service:
+    build: ./order-service
+    ports:
+      - "4002:4002"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/orders
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - mongodb
+      - redis
+
+  user-service:
+    build: ./user-service
+    ports:
+      - "4003:4003"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/users
+      - JWT_SECRET=your_jwt_secret
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.0
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+volumes:
+  mongodb_data:
+  redis_data:
+  elasticsearch_data:
+  prometheus_data:
+  grafana_data: 
