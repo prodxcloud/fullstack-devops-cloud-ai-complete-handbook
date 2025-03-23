@@ -1,0 +1,106 @@
+version: "3.9"
+services:
+  web:
+    image: joelwembo/prodxcloud-django-web-dev:latest
+    container_name: prodxcloud-django-web-dev
+    env_file: .env
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    environment:
+      - DJANGO_SETTINGS_MODULE=multitenantsaas.settings
+      - DJANGO_LOG_LEVEL=DEBUG
+      - ENV=local
+    command:
+      - /bin/sh
+      - -c
+      - |
+        python manage.py makemigrations
+        python manage.py migrate
+        python manage.py collectstatic --noinput
+        gunicorn --bind 0.0.0.0:8585 multitenantsaas.wsgi:application --workers 4 --threads 4
+    ports:
+      - "8585:8585"
+      - "8000:8000"
+    networks:
+      - web_network
+    volumes:
+      - appdata:/djangoapp
+      - staticfiles:/djangoapp/staticfiles  # Ensure static files are not overwritten
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--write-out", "HTTP CODE : %{http_code}\n", "--output", "/dev/null", "http://127.0.0.1:8585/"]
+      interval: 30s
+      timeout: 30s
+      retries: 10
+      start_period: 30s
+
+  db:
+    image: postgres:15.1-alpine
+    container_name: db
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DB=db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PORT=5432
+      - "POSTGRES_HOST_AUTH_METHOD=trust"
+    ports:
+      - "5432:5432"
+    networks:
+      - data_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d postgres -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 4
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: prodxcloud-pgadmin
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "5051:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: joelwembo@outlook.com
+      PGADMIN_DEFAULT_PASSWORD: postgres
+      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: 'False'
+      PGADMIN_CONFIG_WTF_CSRF_CHECK_DEFAULT: 'False'
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/dev/default.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - web
+    networks:
+      - web_network
+
+networks:
+  data_network:
+    driver: bridge
+  web_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  appdata:
+    driver: local
+  staticfiles:
+    driver: local

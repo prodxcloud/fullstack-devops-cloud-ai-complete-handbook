@@ -1,0 +1,11 @@
+{# templates/payments/failure.html #}
+{% extends "base.html" %}
+{% block title %}Payment Failed{% endblock %}
+{% block content %}
+  <div class="text-center mt-5">
+    <h1 class="text-danger">Payment Failed</h1>
+    <p>Unfortunately, your payment was not successful.</p>
+    <p>Please try again later.</p>
+    <a href="{% url 'payments:product_list' %}" class="btn btn-warning mt-3">Back to Products</a>
+  </div>
+{% endblock %}

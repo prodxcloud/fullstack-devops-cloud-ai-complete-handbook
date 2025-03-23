@@ -1,0 +1,40 @@
+# version: '3.9'
+services:
+  # Note: this is the name of docker container for where Next.js server is running. This name is being
+  # used in the nginx/prod/default.conf file to reference the IP of this container.
+  prodxcloud-https:
+    container_name: prodxcloud-htpps
+    image: joelwembo/prodxcloud-htpps:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.https
+  nginx:
+    build: ./nginx/https
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot  
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+  certbot-certonly:
+    image: certbot/certbot
+    container_name: certbot-certonly
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: /bin/sh -c 'sleep 10 && certbot certonly --webroot --webroot-path=/var/www/certbot --email joelotepawembo@gmail.com --agree-tos --no-eff-email -d prodxcloud.online && nginx -s reload'
+    depends_on:
+      - nginx

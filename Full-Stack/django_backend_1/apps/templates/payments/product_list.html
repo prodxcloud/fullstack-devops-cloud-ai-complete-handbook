@@ -1,0 +1,30 @@
+{# templates/payments/product_list.html #}
+{% extends "base.html" %}
+{% block title %}Products{% endblock %}
+{% block content %}
+  <h1 class="mb-4">Products</h1>
+  
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% else %}
+    <div class="product-list">
+      {% for product in products %}
+        <div class="card product-card">
+          {% if product.image %}
+            <img src="{{ product.image }}" class="card-img-top" alt="{{ product.name }} image">
+          {% else %}
+            <img src="https://via.placeholder.com/300x200.png?text=No+Image" class="card-img-top" alt="No image available">
+          {% endif %}
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">{{ product.name }}</h5>
+            <p class="card-text">{{ product.description }}</p>
+            <p class="card-text fw-bold">
+              Price: {{ product.unit_amount|floatformat:2 }} {{ product.currency|upper }}
+            </p>
+            <a href="{% url 'payments:product_detail' product.id %}" class="btn btn-primary mt-auto">View Details</a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,14 @@
+# version: '3.9'
+services:
+  # Note: this is the name of docker container for where Next.js server is running. This name is being
+  # used in the nginx/prod/default.conf file to reference the IP of this container.
+  prodxcloud:
+    container_name: prodxcloud
+    image: joelwembo/prodxcloud:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+  nginx:
+    build: ./nginx/prod
+    ports:
+      - 80:80

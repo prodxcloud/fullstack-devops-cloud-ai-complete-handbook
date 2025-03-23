@@ -1,0 +1,22 @@
+{# templates/payments/product_detail.html #}
+{% extends "base.html" %}
+{% block title %}{{ product.name }} Details{% endblock %}
+{% block content %}
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% else %}
+    <div class="card mb-4">
+      {% if product.image %}
+        <img src="{{ product.image }}" class="card-img-top" alt="{{ product.name }} image" style="height: 400px; object-fit: cover;">
+      {% else %}
+        <img src="https://via.placeholder.com/600x400.png?text=No+Image" class="card-img-top" alt="No image available">
+      {% endif %}
+      <div class="card-body">
+        <h2 class="card-title">{{ product.name }}</h2>
+        <p class="card-text">{{ product.description }}</p>
+        <p class="card-text fw-bold">Price: {{ product.unit_amount|floatformat:2 }} {{ product.currency|upper }}</p>
+        <a href="{% url 'payments:create_payment' product.price_id %}" class="btn btn-success">Buy Now</a>
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

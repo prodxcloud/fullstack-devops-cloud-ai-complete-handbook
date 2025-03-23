@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <form method="post" novalidate>
+            {% csrf_token %}
+            <!-- Email input -->
+            <div data-mdb-input-init class="form-outline mb-4">
+              <input type="email" id="id_email" name="email" class="form-control" 
+                     placeholder="Email address" value="{{ form.email.value|default:'' }}">
+              <label class="form-label" for="id_email">Email address</label>
+              {% if form.email.errors %}
+                <div class="text-danger">
+                  {{ form.email.errors }}
+                </div>
+              {% endif %}
+            </div>
+            <!-- Password input -->
+            <div data-mdb-input-init class="form-outline mb-4">
+              <input type="password" id="id_password" name="password" class="form-control" 
+                     placeholder="Password">
+              <label class="form-label" for="id_password">Password</label>
+              {% if form.password.errors %}
+                <div class="text-danger">
+                  {{ form.password.errors }}
+                </div>
+              {% endif %}
+            </div>
+            <!-- 2 column grid layout for inline styling -->
+            <div class="row mb-4">
+              <div class="col d-flex justify-content-center">
+                <!-- Checkbox -->
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" value="" id="rememberMe" checked>
+                  <label class="form-check-label" for="rememberMe"> Remember me </label>
+                </div>
+              </div>
+              <div class="col">
+                <!-- Forgot password link -->
+                <a href="/">Forgot password?</a>
+              </div>
+            </div>
+            <!-- Submit button -->
+            <button type="submit" data-mdb-button-init data-mdb-ripple-init 
+                    class="btn btn-primary btn-block mb-4">Sign in</button>
+            <!-- Register buttons and social icons -->
+            <div class="text-center">
+              <p>Not a member? <a href="{% url 'auth_register' %}">Register</a></p>
+              <p>or sign up with:</p>
+              <button type="button" data-mdb-button-init data-mdb-ripple-init 
+                      class="btn btn-link btn-floating mx-1">
+                <i class="fab fa-facebook-f"></i>
+              </button>
+              <button type="button" data-mdb-button-init data-mdb-ripple-init 
+                      class="btn btn-link btn-floating mx-1">
+                <i class="fab fa-google"></i>
+              </button>
+              <button type="button" data-mdb-button-init data-mdb-ripple-init 
+                      class="btn btn-link btn-floating mx-1">
+                <i class="fab fa-twitter"></i>
+              </button>
+              <button type="button" data-mdb-button-init data-mdb-ripple-init 
+                      class="btn btn-link btn-floating mx-1">
+                <i class="fab fa-github"></i>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

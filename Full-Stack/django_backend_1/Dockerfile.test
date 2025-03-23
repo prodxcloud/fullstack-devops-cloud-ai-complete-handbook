@@ -1,0 +1,40 @@
+# License: MIT
+# Author: Joel Wembo
+# Company: prodxcloud LLC
+# Copyright (c) 2024 prodxcloud LLC. All rights reserved.
+
+# Use the same base image as production
+FROM python:3.10.12-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DJANGO_SETTINGS_MODULE=multitenantsaas.settings.test \
+    PYTHONPATH=/djangoapp
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    gcc \
+    build-essential \
+    python3-psycopg2 \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set the working directory
+WORKDIR /djangoapp
+
+# Copy requirements
+COPY requirements.txt requirements-test.txt ./
+
+# Install Python dependencies including test dependencies
+RUN pip install --no-cache-dir --upgrade pip setuptools && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir pytest pytest-django pytest-cov
+
+# Copy application code
+COPY . .
+
+# Run tests
+CMD ["pytest", "--cov=.", "--cov-report=term-missing", "-v"] 

@@ -1,0 +1,35 @@
+version: "3.9"
+services:
+  web:
+    image: joelwembo/prodxcloud-django-web:latest
+    container_name: prodxcloud-django-web
+    env_file: .env
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - DJANGO_SETTINGS_MODULE=multitenantsaas.settings
+      - DJANGO_LOG_LEVEL=DEBUG
+      - ENV=local
+    command:
+      - /bin/sh
+      - -c
+      - |
+        python manage.py makemigrations
+        python manage.py migrate
+        python manage.py collectstatic --noinput
+        # python manage.py runserver 0.0.0.0:8585   
+        gunicorn --bind 0.0.0.0:8585 multitenantsaas.wsgi:application
+    ports:
+      - "8585:8585"
+    networks:
+      - web_network
+    volumes:
+       - appdata:/app
+networks:
+  web_network:
+    driver: bridge
+volumes:
+  appdata:
+   driver: local

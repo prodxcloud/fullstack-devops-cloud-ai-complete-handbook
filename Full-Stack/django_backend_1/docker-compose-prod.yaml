@@ -1,0 +1,144 @@
+version: "3.9"
+services:
+  web:
+    image: joelwembo/prodxcloud-django-web-dev:latest
+    container_name: prodxcloud-django-web-dev
+    env_file: .env
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    environment:
+      - DJANGO_SETTINGS_MODULE=multitenantsaas.settings
+      - DJANGO_LOG_LEVEL=DEBUG
+      - ENV=local
+    command:
+      - /bin/sh
+      - -c
+      - |
+        python manage.py makemigrations
+        python manage.py migrate
+        python manage.py collectstatic --noinput
+        gunicorn --bind 0.0.0.0:8585 multitenantsaas.wsgi:application --workers 4 --threads 4
+    ports:
+      - "8585:8585"
+      - "8000:8000"
+    networks:
+      - web_network
+    volumes:
+      - appdata:/djangoapp
+      - staticfiles:/djangoapp/staticfiles  # Ensure static files are not overwritten
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--write-out", "HTTP CODE : %{http_code}\n", "--output", "/dev/null", "http://127.0.0.1:8585/"]
+      interval: 30s
+      timeout: 30s
+      retries: 10
+      start_period: 30s
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/dev/default.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - web
+    networks:
+      - web_network
+      
+  db:
+    image: postgres:15.1-alpine
+    container_name: db
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DB=db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PORT=5432
+      - "POSTGRES_HOST_AUTH_METHOD=trust"
+    ports:
+      - "5432:5432"
+    networks:
+      - data_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d postgres -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 4
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: prodxcloud-pgadmin
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "5051:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: joelwembo@outlook.com
+      PGADMIN_DEFAULT_PASSWORD: postgres
+      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: 'False'
+      PGADMIN_CONFIG_WTF_CSRF_CHECK_DEFAULT: 'False'
+
+  celery:
+    container_name: prodxcloud-django-celery
+    build: .
+    command: 
+       - /bin/sh
+       - -c
+       - |
+        user=django
+        group=developers
+        environment=C_FORCE_ROOT="yes"
+        environment=HOME="/root",USER="django"
+        celery -A multitenantsaas worker -l info
+        
+    volumes:
+      - .:/django_app
+    environment:
+      - DEBUG=0
+      - DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 172.104.60.217  [::1]
+      - CELERY_BROKER_URL="redis://redis:6379/0"
+      - CELERY_RESULT_BACKEND="redis://redis:6379/0"
+      - broker_connection_retry_on_startup="True"
+      - CELERY_TASK_ALWAYS_EAGER=True
+      - C_FORCE_ROOT=true
+      - BROKER_TRANSPORT="kombu.transport.django"
+    depends_on:
+      - redis   
+
+  redis:
+      image: "redis:alpine"
+      container_name: prodxcloud-django-redis
+      ports:
+        - '6379:6379'  # Map host port 6379 to container port 6379
+      expose:
+        - "6379"  # Expose port 6379 to linked services
+      volumes:
+          - redisDB:/data  # Mount volume redisDB to /data in the container
+      networks:
+          - redis_network  # Connect to redis_network
+
+networks:
+  data_network:
+    driver: bridge
+  web_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  appdata:
+    driver: local
+  staticfiles:
+    driver: local

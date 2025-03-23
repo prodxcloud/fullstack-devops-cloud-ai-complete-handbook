@@ -1,0 +1,42 @@
+FROM node:20-alpine as build
+# set working directory
+WORKDIR /app
+# add `/app/node_modules/.bin` to $PATH
+ENV PATH /app/node_modules/.bin:$PATH
+
+COPY package.json ./
+COPY package-lock.json ./
+# Install dependencies
+RUN npm install
+# Copy all files
+COPY ./ ./
+# Set environment variable to address OpenSSL error
+ENV NODE_OPTIONS=--openssl-legacy-provider
+# build app
+RUN npm run build && ls -al
+# Install the 'serve' package globally
+RUN npm install -g serve
+# Set NODE_ENV to production
+ENV NODE_ENV=production
+# Expose the listening port
+EXPOSE 3000
+EXPOSE 3000/tcp
+EXPOSE 80
+EXPOSE 80/tcp
+EXPOSE 443
+
+#* ###########################
+#* ##### Stage 2: Nginx ######
+#* ###########################
+# Use an official Nginx runtime as a parent image
+FROM nginx:latest
+# Remove any existing config files
+RUN rm /etc/nginx/conf.d/*
+# Copy the nginx/dev/nginx.conf to the container
+COPY ./nginx/dev/default.conf /etc/nginx/conf.d/default.conf
+# Copy the NextJS app build files to the nginx container
+# rm existing and default nginx index file
+RUN rm /usr/share/nginx/html/*
+COPY --from=build /app/build /usr/share/nginx/html
+# Start Nginx when the container starts
+CMD ["nginx", "-g", "daemon off;"]

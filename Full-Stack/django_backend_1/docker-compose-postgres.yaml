@@ -1,0 +1,51 @@
+version: "3.9"
+services:
+  db:
+    restart: always
+    image: postgres:15.1-alpine
+    container_name: db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env 
+    environment:
+      - POSTGRES_DB=DB3
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PORT=5432
+      - "POSTGRES_HOST_AUTH_METHOD=trust"
+    expose:
+       - "5432"
+    ports:
+       - "5432:5432"
+    networks:
+       - data_network 
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d postgres -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5     
+  pgadmin:
+        restart: always
+        image: dpage/pgadmin4
+        container_name: prodxcloud-pgadmin 
+        depends_on:
+          - db
+        ports:
+          - "5052:80"
+        environment:
+          PGADMIN_DEFAULT_EMAIL: joelwembo@outlook.com
+          PGADMIN_DEFAULT_PASSWORD: postgres   
+          PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: 'False'
+          PGADMIN_CONFIG_WTF_CSRF_CHECK_DEFAULT: 'False'
+            
+
+networks:
+  data_network:
+    driver: bridge
+  web_network:
+    driver: bridge  
+volumes:
+ postgres_data:
+ appdata:
+  driver: local

@@ -1,0 +1,17 @@
+# Example .dockerignore file
+node_modules/
+.github
+*.log
+*.swp
+dist
+build
+.next
+.vscode
+deployment
+deployment-prodxcloud-dev.yaml
+deployment-prodxcloud-prod.yaml
+start.sh
+run.sh
+# next.js
+/.next/
+/out/
