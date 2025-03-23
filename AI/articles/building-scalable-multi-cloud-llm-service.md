@@ -1,12 +1,139 @@
-# MCP (Master Control Program): Building a Scalable Multi-Cloud LLM Service with Docker
+# Model Context Protocol (MCP): Building a Scalable Multi-Cloud LLM Service
 
-> This article is part of the [Full-Stack DevOps Cloud AI Complete Handbook](https://github.com/prodxcloud/fullstack-devops-cloud-ai-complete-handbook/), a comprehensive resource for modern software development, DevOps practices, cloud architecture, and AI integration. The complete source code and additional resources are available in the repository.
+> This article is part of the [Full-Stack DevOps Cloud AI Complete Handbook](https://github.com/prodxcloud/fullstack-devops-cloud-ai-complete-handbook/), focusing on implementing Anthropic's Model Context Protocol for enhanced LLM interactions.
 
-**Keywords**: MCP, Master Control Program, multi-cloud AI, LLaMA 2 deployment, Docker containerization, cloud-native AI, distributed ML systems
+**Keywords**: Model Context Protocol, MCP, LLaMA 2, context management, prompt engineering, multi-cloud deployment
 
-> Learn how to build a production-ready, multi-cloud LLM service using the Master Control Program (MCP) architecture. This comprehensive guide demonstrates how MCP orchestrates LLaMA 2 deployment across AWS, GCP, and Azure, providing intelligent load balancing, automatic failover, and centralized control.
+## Understanding Model Context Protocol
 
-![Multi-Cloud Architecture](https://raw.githubusercontent.com/microsoft/MCW-Building-a-resilient-IaaS-architecture/master/Whiteboard%20design%20session/images/multi-cloud-architecture.png)
+The Model Context Protocol (MCP), introduced by Anthropic, represents a standardized approach to managing context in large language models. Our implementation focuses on:
+
+1. **Context Management**: Structured handling of conversation history and system prompts
+2. **Protocol Standardization**: Consistent format for model interactions
+3. **Context Window Optimization**: Efficient use of available context space
+4. **Cross-Model Compatibility**: Standardized interactions across different LLMs
+5. **Semantic Preservation**: Maintaining context coherence across interactions
+
+### MCP System Architecture
+
+```mermaid
+graph TD
+    subgraph Client Layer
+        A[Client Request] --> B[Context Manager]
+    end
+
+    subgraph Protocol Layer
+        B --> C[Context Formatter]
+        B --> D[Window Manager]
+        B --> E[Token Counter]
+        
+        C --> F[Protocol Store]
+        D --> F
+        E --> F
+    end
+
+    subgraph Model Layer
+        D --> G[AWS LLM Service]
+        D --> H[GCP LLM Service]
+        D --> I[Azure LLM Service]
+        
+        G --> J[Context Cache]
+        H --> J
+        I --> J
+    end
+
+    style Client Layer fill:#f9f,stroke:#333,stroke-width:2px
+    style Protocol Layer fill:#bbf,stroke:#333,stroke-width:2px
+    style Model Layer fill:#bfb,stroke:#333,stroke-width:2px
+```
+
+### Context Management Implementation
+
+```python
+class ModelContextManager:
+    def __init__(self, max_context_length: int = 4096):
+        self.max_length = max_context_length
+        self.context_store = ContextStore()
+        self.token_counter = TokenCounter()
+    
+    async def format_context(
+        self,
+        system_prompt: str,
+        conversation_history: List[Dict],
+        user_input: str
+    ) -> Dict:
+        """Format context according to Model Context Protocol."""
+        context = {
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                *[{
+                    "role": msg["role"],
+                    "content": msg["content"]
+                } for msg in conversation_history],
+                {"role": "user", "content": user_input}
+            ],
+            "metadata": {
+                "max_tokens": self.max_length,
+                "temperature": 0.7,
+                "protocol_version": "1.0"
+            }
+        }
+        
+        # Ensure context fits within limits
+        if self.token_counter.count_tokens(context) > self.max_length:
+            context = self._truncate_context(context)
+            
+        return context
+        
+    def _truncate_context(self, context: Dict) -> Dict:
+        """Intelligently truncate context while preserving semantic meaning."""
+        messages = context["messages"]
+        system_prompt = messages[0]  # Preserve system prompt
+        
+        while self.token_counter.count_tokens(context) > self.max_length:
+            if len(messages) > 2:  # Keep system prompt and latest message
+                messages.pop(1)
+                
+        return context
+```
+
+### Protocol Handler
+
+```python
+class MCPHandler:
+    def __init__(self):
+        self.context_manager = ModelContextManager()
+        self.protocol_validator = ProtocolValidator()
+        
+    async def process_request(
+        self,
+        request: Dict,
+        model_provider: str
+    ) -> Dict:
+        """Process request according to Model Context Protocol."""
+        
+        # Validate protocol compliance
+        self.protocol_validator.validate(request)
+        
+        # Format context
+        context = await self.context_manager.format_context(
+            request.get("system_prompt", ""),
+            request.get("conversation_history", []),
+            request["user_input"]
+        )
+        
+        # Select model provider
+        model_service = self._get_model_service(model_provider)
+        
+        # Get response
+        response = await model_service.generate(context)
+        
+        return {
+            "response": response,
+            "context_length": self.context_manager.token_counter.count_tokens(context),
+            "protocol_version": "1.0"
+        }
+```
 
 ## Table of Contents
 - [Introduction to MCP](#introduction)
@@ -33,61 +160,6 @@ The Master Control Program (MCP) serves as the central nervous system for our mu
 ## Architecture Overview
 
 The MCP architecture orchestrates several key components to provide a robust and scalable multi-cloud solution.
-
-### MCP System Architecture
-
-```mermaid
-graph TD
-    subgraph Client Layer
-        A[Client Request] --> B[MCP Central Controller]
-    end
-
-    subgraph MCP Control Layer
-        B --> C[MCP Service Registry]
-        B --> D[MCP Load Balancer]
-        B --> E[MCP Health Monitor]
-        
-        C --> F[Redis State Store]
-        D --> F
-        E --> F
-    end
-
-    subgraph Cloud Provider Layer
-        D --> G[AWS MCP Agent]
-        D --> H[GCP MCP Agent]
-        D --> I[Azure MCP Agent]
-        
-        G --> J[AWS LLaMA Service]
-        H --> K[GCP LLaMA Service]
-        I --> L[Azure LLaMA Service]
-    end
-
-    subgraph Resource Layer
-        J --> M[AWS GPU Cluster]
-        K --> N[GCP GPU Cluster]
-        L --> O[Azure GPU Cluster]
-    end
-
-    subgraph Monitoring Layer
-        P[MCP Metrics Collector]
-        Q[MCP Alert Manager]
-        R[MCP Dashboard/Grafana]
-        
-        J --> P
-        K --> P
-        L --> P
-        
-        P --> R
-        P --> Q
-        Q --> R
-    end
-
-    style Client Layer fill:#f9f,stroke:#333,stroke-width:2px
-    style MCP Control Layer fill:#bbf,stroke:#333,stroke-width:2px
-    style Cloud Provider Layer fill:#bfb,stroke:#333,stroke-width:2px
-    style Resource Layer fill:#fbb,stroke:#333,stroke-width:2px
-    style Monitoring Layer fill:#ffb,stroke:#333,stroke-width:2px
-```
 
 ### MCP Component Breakdown
 
