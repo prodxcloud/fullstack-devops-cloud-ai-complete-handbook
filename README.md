@@ -28,7 +28,7 @@ Welcome to the **Full-Stack DevOps Cloud AI Complete Handbook**! Your comprehens
 - ☁️ Multi-cloud platform expertise
 - 🤖 Cutting-edge AI integration
 - 🧪 Practical examples and exercises
-- 📖 Detailed documentation
+- 📖 Detailed documentations
 
 ## 💻 Full-Stack Development
 Master modern web development with our comprehensive guides:
