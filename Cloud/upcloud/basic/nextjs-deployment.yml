@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextjs-deployment-basic
+  labels:
+    app: nextjs-deployment-basic
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nextjs-deployment-basic
+  template:
+    metadata:
+      labels:
+        app: nextjs-deployment-basic
+    spec:
+      containers:
+        - name: nextjs-app
+          image: joelwembo/prodxcloud-frontend-nextjs:latest
+          ports:
+            - containerPort: 3000
+          imagePullPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextjs-service-basic
+spec:
+  selector:
+    app: nextjs-deployment-basic
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: LoadBalancer 

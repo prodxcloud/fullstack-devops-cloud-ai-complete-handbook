@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-deployment-basic
+  labels:
+    app: django-deployment-basic
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: django-deployment-basic
+  template:
+    metadata:
+      labels:
+        app: django-deployment-basic
+    spec:
+      containers:
+        - name: django-app
+          image: joelwembo/prodxcloud-backend-django:latest
+          command:
+            - gunicorn
+          args:
+            - /bin/sh
+            - -c
+            - |
+              python manage.py makemigrations
+              python manage.py migrate
+              gunicorn --bind 0.0.0.0:80 --timeout 3600 api.wsgi:application
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-service-basic
+spec:
+  selector:
+    app: django-deployment-basic
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: LoadBalancer
