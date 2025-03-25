@@ -8,7 +8,10 @@ terraform {
   }
 }
 
-
+provider "upcloud" {
+  username = "prodxcloud"
+  password = "Michael@5151"
+}
 
 # Create a network for the Kubernetes cluster
 resource "upcloud_network" "example" {

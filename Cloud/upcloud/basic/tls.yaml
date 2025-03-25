@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: prodxcloud-django-web-tls
+  namespace: default
+type: kubernetes.io/tls
+data:
+  tls.crt: Put service here
+  tls.key: <base64-encoded-key>
